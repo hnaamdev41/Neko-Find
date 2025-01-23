@@ -1,34 +1,38 @@
 // lib/presentation/screens/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../widgets/profile_avatar.dart';
 import 'home_screen.dart';
 import 'map_screen.dart';
 import 'adoption_screen.dart';
+import '../widgets/profile_avatar.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final RxInt currentIndex = 0.obs;
+    final currentIndex = 0.obs;
+
+    final screens = [
+      const HomeScreen(),
+      const MapScreen(),
+      const AdoptionScreen(),
+    ];
+
+    final titles = ['', 'Cat Map', 'Adopt a Cat'];
 
     return Obx(() => Scaffold(
       appBar: AppBar(
-        title: const Text('Neko Find'),
+        title: Text(titles[currentIndex.value]),
+        centerTitle: true,
         actions: [
-          ProfileAvatar(
-            onTap: () => Get.toNamed('/profile'),
-          ),
+          if (currentIndex.value == 0) 
+            ProfileAvatar(onTap: () => Get.toNamed('/profile')),
         ],
       ),
       body: IndexedStack(
         index: currentIndex.value,
-        children: const [
-          HomeScreen(),
-          MapScreen(),
-          AdoptionScreen(),
-        ],
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex.value,

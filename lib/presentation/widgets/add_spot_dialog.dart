@@ -1,6 +1,8 @@
+// lib/presentation/widgets/add_spot_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../data/services/auth_service.dart';
 import 'dart:io';
 
 class AddSpotDialog extends StatefulWidget {
@@ -15,6 +17,7 @@ class _AddSpotDialogState extends State<AddSpotDialog> {
   final catCountController = TextEditingController();
   final nearbyLocationController = TextEditingController();
   final images = <String>[].obs;
+  final authService = Get.find<AuthService>();
 
   @override
   Widget build(BuildContext context) {
@@ -24,18 +27,42 @@ class _AddSpotDialogState extends State<AddSpotDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            InkWell(
-              onTap: _pickImage,
-              child: Container(
-                height: 100,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+            AspectRatio(
+              aspectRatio: 16/9,
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                 ),
-                child: images.isEmpty
-                    ? const Icon(Icons.add_photo_alternate)
-                    : Image.file(File(images.first), fit: BoxFit.cover),
+                itemCount: images.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == images.length) {
+                    return InkWell(
+                      onTap: _pickImage,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.add_photo_alternate),
+                      ),
+                    );
+                  }
+                  return Stack(
+                    children: [
+                      Image.file(File(images[index]), fit: BoxFit.cover),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => setState(() => images.removeAt(index)),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),
@@ -73,16 +100,15 @@ class _AddSpotDialogState extends State<AddSpotDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            if (locationNameController.text.isEmpty) {
-              Get.snackbar('Error', 'Please enter a location name');
-              return;
-            }
+            if (!_validateInput()) return;
             
             Get.back(result: {
               'locationName': locationNameController.text,
-              'catCount': catCountController.text.isEmpty ? '1' : catCountController.text,
+              'catCount': catCountController.text,
               'nearbyLocation': nearbyLocationController.text,
               'images': images,
+              'userId': authService.currentUser.value?.id,
+              'username': authService.currentUser.value?.username,
             });
           },
           child: const Text('Add'),
@@ -96,8 +122,19 @@ class _AddSpotDialogState extends State<AddSpotDialog> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     
     if (pickedFile != null) {
-      images.add(pickedFile.path);
-      setState(() {});
+      setState(() => images.add(pickedFile.path));
     }
+  }
+
+  bool _validateInput() {
+    if (locationNameController.text.isEmpty) {
+      Get.snackbar('Error', 'Please enter a location name');
+      return false;
+    }
+    if (catCountController.text.isEmpty) {
+      Get.snackbar('Error', 'Please enter number of cats');
+      return false;
+    }
+    return true;
   }
 }

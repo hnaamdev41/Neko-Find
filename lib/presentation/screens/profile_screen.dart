@@ -1,9 +1,7 @@
 // lib/presentation/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../data/services/auth_service.dart';
-import '../../data/services/storage_service.dart';
 import '../controllers/profile_controller.dart';
 
 class ProfileScreen extends StatelessWidget {

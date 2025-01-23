@@ -6,13 +6,12 @@ part of 'cat_post.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CatPostImpl _$$CatPostImplFromJson(Map<String, dynamic> json) =>
-    _$CatPostImpl(
+CatPost _$CatPostFromJson(Map<String, dynamic> json) => CatPost(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String,
       estimatedAge: json['estimated_age'] as String,
-      contactInfo: json['contactinfo'] as String,
+      contactInfo: json['contact_info'] as String,
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
       imageUrls: (json['image_urls'] as List<dynamic>)
@@ -22,13 +21,12 @@ _$CatPostImpl _$$CatPostImplFromJson(Map<String, dynamic> json) =>
       userId: json['user_id'] as String?,
     );
 
-Map<String, dynamic> _$$CatPostImplToJson(_$CatPostImpl instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$CatPostToJson(CatPost instance) => <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
       'description': instance.description,
       'estimated_age': instance.estimatedAge,
-      'contactinfo': instance.contactInfo,
+      'contact_info': instance.contactInfo,
       'latitude': instance.latitude,
       'longitude': instance.longitude,
       'image_urls': instance.imageUrls,
