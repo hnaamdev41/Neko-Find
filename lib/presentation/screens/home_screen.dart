@@ -1,6 +1,9 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../data/services/content_generator.dart';
+import '../widgets/profile_avatar.dart';
+import '../../core/theme/app_theme.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -8,29 +11,59 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final feeds = CatContentGenerator.generateFeeds();
+    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Neko Find')),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Neko Find',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                ProfileAvatar(
+                  onTap: () => Get.toNamed('/profile'),
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: feeds.length,
         itemBuilder: (context, index) {
           final feed = feeds[index];
           return Card(
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    color: theme.colorScheme.primaryContainer,
+                    child: Center(
+                      child: Icon(
+                        Icons.pets,
+                        size: 48,
+                        color: AppColors.primary,
+                      ),
                     ),
                   ),
-                  child: const Icon(Icons.pets, size: 48),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -43,31 +76,49 @@ class HomeScreen extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondaryContainer,
+                          color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          feed['type'],
-                          style: Theme.of(context).textTheme.labelSmall,
+                          feed['type'] ?? '',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        feed['title'] ?? '',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        feed['title'],
-                        style: Theme.of(context).textTheme.titleLarge,
+                        feed['description'] ?? '',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(feed['description']),
                       const SizedBox(height: 16),
                       Row(
                         children: [
                           Icon(
                             Icons.favorite,
                             size: 16,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: AppColors.primary,
                           ),
                           const SizedBox(width: 4),
-                          Text(feed['likes'].toString()),
+                          Text(
+                            (feed['likes'] ?? 0).toString(),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ],
