@@ -1,4 +1,3 @@
-// lib/presentation/screens/adoption_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -16,6 +15,7 @@ class AdoptionScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Adopt a Cat'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [

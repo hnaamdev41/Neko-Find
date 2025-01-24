@@ -1,6 +1,8 @@
 // lib/presentation/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../data/services/content_generator.dart';
+import '../../data/services/auth_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -8,9 +10,40 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final feeds = CatContentGenerator.generateFeeds();
+    final authService = Get.find<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Neko Find')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Neko Find',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => Get.toNamed('/profile'),
+              child: Obx(() {
+                final user = authService.currentUser.value;
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  backgroundImage: user?.avatarUrl != null
+                    ? NetworkImage(user!.avatarUrl!)
+                    : null,
+                  child: user?.avatarUrl == null
+                    ? const Icon(Icons.person, size: 20)
+                    : null,
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: feeds.length,

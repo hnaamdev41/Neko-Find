@@ -1,11 +1,13 @@
 // lib/presentation/controllers/map_controller.dart
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/location_service.dart';
 import '../../data/services/storage_service.dart';
 import '../../data/services/auth_service.dart';
@@ -13,7 +15,6 @@ import '../../data/repositories/cat_spot_repository.dart';
 import '../../data/repositories/favorites_repository.dart';
 import '../../data/models/cat_spot.dart';
 import '../../utils/marker_clustering.dart';
-import 'package:flutter/services.dart';
 import '../../utils/marker_clustering.dart' as marker_cluster;
 import 'package:neko_find/utils/marker_clustering.dart' hide Cluster;
 
@@ -28,7 +29,7 @@ class MapController extends GetxController {
  final markers = <Marker>{}.obs;
  final isLoading = true.obs;
  final isDialogOpen = false.obs;
-final clusters = <marker_cluster.Cluster>[].obs;
+ final clusters = <marker_cluster.Cluster>[].obs;
  final mapSize = const Size(0, 0).obs;
  final spots = <CatSpot>[].obs;
  final favoriteSpots = <String>[].obs;
@@ -36,104 +37,51 @@ final clusters = <marker_cluster.Cluster>[].obs;
  BitmapDescriptor? customMarkerIcon;
  GoogleMapController? mapController;
 
-String get mapStyleString => '''[
-  {
-    "elementType": "geometry",
-    "stylers": [{"color": "#242f3e"}]
-  },
-  {
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#746855"}]
-  },
-  {
-    "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#242f3e"}]
-  },
-  {
-    "featureType": "administrative.locality",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#d59563"}]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#d59563"}]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "geometry",
-    "stylers": [{"color": "#263c3f"}]
-  },
-  {
-    "featureType": "poi.park",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#6b9a76"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{"color": "#38414e"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [{"color": "#212a37"}]
-  },
-  {
-    "featureType": "road",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#9ca5b3"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [{"color": "#746855"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry.stroke",
-    "stylers": [{"color": "#1f2835"}]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#f3d19c"}]
-  },
-  {
-    "featureType": "transit",
-    "elementType": "geometry",
-    "stylers": [{"color": "#2f3948"}]
-  },
-  {
-    "featureType": "transit.station",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#d59563"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{"color": "#17263c"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.fill",
-    "stylers": [{"color": "#515c6d"}]
-  },
-  {
-    "featureType": "water",
-    "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#17263c"}]
-  }
-]''';
-
+ String get mapStyleString => '''[
+   {
+     "elementType": "geometry",
+     "stylers": [{"color": "#212121"}]
+   },
+   {
+     "elementType": "labels",
+     "stylers": [{"visibility": "off"}]
+   },
+   {
+     "featureType": "administrative",
+     "stylers": [{"visibility": "off"}]
+   },
+   {
+     "featureType": "poi",
+     "stylers": [{"visibility": "off"}]
+   },
+   {
+     "featureType": "road",
+     "elementType": "geometry",
+     "stylers": [{"color": "#424242"}]
+   },
+   {
+     "featureType": "road",
+     "elementType": "geometry.stroke",
+     "stylers": [{"color": "#212121"}]
+   },
+   {
+     "featureType": "transit",
+     "stylers": [{"visibility": "off"}]
+   },
+   {
+     "featureType": "water",
+     "elementType": "geometry",
+     "stylers": [{"color": "#000000"}]
+   }
+ ]''';
 
  @override
  void onInit() {
    super.onInit();
    _initializeMap();
    _loadCustomMarker();
-   loadCatSpots();
-   _loadFavorites();
+   _loadSavedData(); 
+   ever(spots, (_) => _saveData());
  }
 
  Future<void> _initializeMap() async {
@@ -147,34 +95,94 @@ String get mapStyleString => '''[
    }
  }
 
- Future<void> _loadCustomMarker() async {
+Future<void> _loadCustomMarker() async {
+  try {
+    final ByteData data = await rootBundle.load('assets/icons/paw-icon.svg');
+    final String svgString = String.fromCharCodes(data.buffer.asUint8List());
+    
+    // Create a PictureRecorder and Canvas
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    
+    // Draw a circle with paw icon
+    final paint = Paint()
+      ..color = Get.theme.primaryColor
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(const Offset(48, 48), 48, paint);
+    
+    // Draw paw icon
+    final icon = Icons.pets;
+    TextPainter textPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 48,
+          fontFamily: icon.fontFamily,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(48 - textPainter.width / 2, 48 - textPainter.height / 2),
+    );
+
+    // Convert to image
+    final ui.Image image = await recorder.endRecording().toImage(96, 96);
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    if (byteData != null) {
+      customMarkerIcon = BitmapDescriptor.fromBytes(byteData.buffer.asUint8List());
+    }
+  } catch (e) {
+    debugPrint('Error loading custom marker: $e');
+    customMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+  }
+}
+
+Future<void> loadCatSpots() async {
+  try {
+    final newSpots = await _catSpotRepository.getCatSpots();
+    // Merge with existing spots, avoiding duplicates
+    final existingIds = spots.map((s) => s.id).toSet();
+    spots.value = [
+      ...spots,
+      ...newSpots.where((s) => !existingIds.contains(s.id))
+    ];
+    updateClusters();
+  } catch (e) {
+    Get.snackbar('Error', 'Failed to load cat spots: $e');
+  }
+}
+
+ Future<void> _loadSavedData() async {
    try {
-     final ByteData data = await rootBundle.load('assets/icons/paw-icon.svg');
-     final String svgString = String.fromCharCodes(data.buffer.asUint8List());
-     
-     final PictureInfo pictureInfo = await vg.loadPicture(
-       SvgStringLoader(svgString),
-       null,
-     );
-
-     final ui.Image image = await pictureInfo.picture.toImage(48, 48);
-     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-     if (byteData != null) {
-       customMarkerIcon = BitmapDescriptor.fromBytes(byteData.buffer.asUint8List());
+     await loadCatSpots();
+     final prefs = await SharedPreferences.getInstance();
+     final savedSpots = prefs.getStringList('cat_spots');
+     if (savedSpots != null) {
+       spots.value = savedSpots
+           .map((json) => CatSpot.fromJson(jsonDecode(json)))
+           .toList();
+       updateClusters();
      }
    } catch (e) {
-     debugPrint('Error loading custom marker: $e');
-     customMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+     debugPrint('Error loading saved data: $e');
    }
  }
 
- Future<void> loadCatSpots() async {
+ Future<void> _saveData() async {
    try {
-     spots.value = await _catSpotRepository.getCatSpots();
-     updateClusters();
+     final prefs = await SharedPreferences.getInstance();
+     final spotsJson = spots
+         .map((spot) => jsonEncode(spot.toJson()))
+         .toList();
+     await prefs.setStringList('cat_spots', spotsJson);
    } catch (e) {
-     Get.snackbar('Error', 'Failed to load cat spots: $e');
+     debugPrint('Error saving data: $e');
    }
  }
 
@@ -259,35 +267,56 @@ String get mapStyleString => '''[
    );
  }
 
- Future<BitmapDescriptor> _getClusterIcon(int size) async {
-   final recorder = ui.PictureRecorder();
-   final canvas = Canvas(recorder);
-   final paint = Paint()..color = Get.theme.primaryColor;
-   
-   canvas.drawCircle(const Offset(20, 20), 20, paint);
-   
-   TextPainter textPainter = TextPainter(
-     text: TextSpan(
-       text: size.toString(),
-       style: const TextStyle(
-         color: Colors.white,
-         fontSize: 16,
-         fontWeight: FontWeight.bold,
-       ),
-     ),
-     textDirection: TextDirection.ltr,
-   );
-   textPainter.layout();
-   textPainter.paint(
-     canvas,
-     Offset(20 - textPainter.width / 2, 20 - textPainter.height / 2),
-   );
-   
-   final image = await recorder.endRecording().toImage(40, 40);
-   final data = await image.toByteData(format: ui.ImageByteFormat.png);
-   
-   return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
- }
+Future<BitmapDescriptor> _getClusterIcon(int size) async {
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  final paint = Paint()..color = Get.theme.colorScheme.primary;
+  
+  // Size categories
+  final double radius = _getClusterRadius(size);
+  canvas.drawCircle(Offset(radius, radius), radius, paint);
+  
+  // Add inner circle for larger clusters
+  if (size > 10) {
+    final innerPaint = Paint()..color = Colors.white.withOpacity(0.3);
+    canvas.drawCircle(Offset(radius, radius), radius * 0.7, innerPaint);
+  }
+  
+  TextPainter textPainter = TextPainter(
+    text: TextSpan(
+      text: _formatClusterSize(size),
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: size > 99 ? 24 : 32,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  );
+  textPainter.layout();
+  textPainter.paint(
+    canvas,
+    Offset(radius - textPainter.width / 2, radius - textPainter.height / 2),
+  );
+  
+  final image = await recorder.endRecording().toImage(radius.toInt() * 2, radius.toInt() * 2);
+  final data = await image.toByteData(format: ui.ImageByteFormat.png);
+  
+  return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
+}
+
+double _getClusterRadius(int size) {
+  if (size < 10) return 40;
+  if (size < 50) return 50;
+  if (size < 100) return 60;
+  return 70;
+}
+
+String _formatClusterSize(int size) {
+  if (size < 100) return size.toString();
+  if (size < 1000) return '${(size / 100).floor()}00+';
+  return '999+';
+}
 
  void _showClusterDetails(marker_cluster.Cluster cluster) {
    Get.bottomSheet(
@@ -466,7 +495,7 @@ String get mapStyleString => '''[
 
    final favoriteSpotsList = spots.where(
      (spot) => favoriteSpots.contains(spot.id)
-   ).toList();
+     ).toList();
 
    if (favoriteSpotsList.isEmpty) {
      Get.snackbar('Info', 'No favorite spots yet');
@@ -523,6 +552,7 @@ String get mapStyleString => '''[
 
  @override
  void onClose() {
+   _saveData();
    mapController?.dispose();
    super.onClose();
  }
