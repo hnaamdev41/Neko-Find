@@ -3,9 +3,9 @@ class CatContentGenerator {
   static List<Map<String, dynamic>> generateFeeds() {
     return [
       {
-        'title': 'Cats Nekko',
-        'description': 'Feeding Suraj into Samay.',
-        'type': 'Mission',
+        'title': 'Cats Feeding tips',
+        'description': 'Choose high-quality cat food with real meat listed as the first ingredient. Look for complete nutrition with taurine for eye and heart health.',
+        'type': 'feeding',
         'imageUrl': 'assets/images/diy_feeder.png',
         'likes': 0,
       },
